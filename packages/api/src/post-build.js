@@ -172,12 +172,12 @@ class PostBuildHandler {
     const timestamp = isNaN(timestampNumb) ? new Date() : new Date(timestampNumb);
 
     const returnVal = {
-      repoId: firebaseEncode(metadata.repoId),
+      repoId: firebaseEncode(decodeURIComponent(metadata.repoId)),
       organization: metadata.organization,
       timestamp,
       url: metadata.url,
       environment: PostBuildHandler.cleanEnvironment(metadata),
-      buildId: firebaseEncode(metadata.buildId),
+      buildId: firebaseEncode(decodeURIComponent(metadata.buildId)),
       sha: metadata.sha,
       name: metadata.name,
       description: metadata.description,
