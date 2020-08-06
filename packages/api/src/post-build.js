@@ -49,6 +49,7 @@ class PostBuildHandler {
     return envData;
   }
 
+  // IMPORTANT: All values that will be used as keys in Firestore must be escaped with the firestoreEncode function
   static parseBuildInfo (metadata) {
     // buildInfo must have attributes of organization, timestamp, url, environment, buildId
     const timestamp = metadata.github.event.head_commit ? new Date(metadata.github.event.head_commit.timestamp) : new Date();
@@ -167,6 +168,7 @@ class PostBuildHandler {
     return result;
   }
 
+  // IMPORTANT: All values that will be used as keys in Firestore must be escaped with the firestoreEncode function
   static cleanBuildInfo (metadata) {
     const timestampNumb = Date.parse(metadata.timestamp);
     const timestamp = isNaN(timestampNumb) ? new Date() : new Date(timestampNumb);
@@ -239,7 +241,7 @@ class PostBuildHandler {
 
     // endpoint expects the the required buildinfo to be in req.body.metadata to already exist and be properly formatted.
     // required keys in the req.body.metadata are the inputs for addBuild in src/add-build.js
-    this.app.post('/api/build-v1', async (req, res, next) => {
+    this.app.post('/api/build/gh/v1', async (req, res, next) => {
       try {
         if (req.body.metadata.private) {
           throw new UnauthorizedError('Flaky does not store tests for private repos');

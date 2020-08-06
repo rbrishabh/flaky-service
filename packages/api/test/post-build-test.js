@@ -207,7 +207,7 @@ describe('Posting Builds', () => {
     }
   });
 
-  it('it should be able to post data already formatted to /build-v1', async () => {
+  it('it should be able to post data already formatted to /build/gh/v1', async () => {
     const payloadJSON = JSON.parse(EXAMPLE_PAYLOAD_RAW);
 
     payloadJSON.metadata = {
@@ -238,7 +238,7 @@ describe('Posting Builds', () => {
       .get('/installation/repositories')
       .reply(200, validNockResponse);
 
-    const resp = await fetch('http://127.0.0.1:3000/api/build-v1', {
+    const resp = await fetch('http://127.0.0.1:3000/api/build/gh/v1', {
       method: 'post',
       body: JSON.stringify(payloadJSON),
       headers: { 'Content-Type': 'application/json' }
