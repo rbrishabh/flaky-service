@@ -14,6 +14,8 @@
 
 import {Component, Input} from '@angular/core';
 import {Test} from 'src/app/services/search/interfaces';
+import {COMService} from '../../../services/com/com.service';
+import {environment} from '../../../../environments/environment';
 
 @Component({
   selector: 'app-test-details',
@@ -21,10 +23,27 @@ import {Test} from 'src/app/services/search/interfaces';
   styleUrls: ['./test-details.component.css'],
 })
 export class TestDetailsComponent {
+  constructor(public comService: COMService) {}
   @Input() test: Test;
+  @Input() repoName: string;
+  @Input() orgName: string;
+  windowProvider = window;
 
   //Converts tests' passing percentage from decimal to percentage
   toPercentage(percentpassing: number): string {
     return (percentpassing * 100).toFixed(2);
+  }
+
+  startDeleteTest() {
+    this.comService
+      .fetchDeleteTestUrl(
+        this.orgName,
+        this.repoName,
+        this.test.name,
+        environment.baseUrl
+      )
+      .subscribe(res => {
+        this.windowProvider.open(res, '_self');
+      });
   }
 }

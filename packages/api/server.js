@@ -28,13 +28,13 @@ const { v4 } = require('uuid');
 
 const cors = require('cors');
 
-global.headCollection = process.env.HEAD_COLLECTION || 'testing/main/repos';
+global.headCollection = process.env.HEAD_COLLECTION || 'staging/main/repos';
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
-app.delete('/api/repo/:orgname/:reponame/test/:testid', async (req, res) => {
+app.get('/api/repo/:orgname/:reponame/test/:testid', async (req, res) => {
   const orgName = req.params.orgname;
   const repoId = req.params.reponame;
   const testName = req.params.testid;
@@ -52,7 +52,7 @@ app.delete('/api/repo/:orgname/:reponame/test/:testid', async (req, res) => {
   });
 
   const url = `http://github.com/login/oauth/authorize?client_id=${process.env.CLIENT_ID}&state=${state}&allow_signup=false&scope=repo`;
-  res.status(302).redirect(url);
+  res.status(200).send(url);
 });
 
 app.get('/api/callback', async (req, res) => {

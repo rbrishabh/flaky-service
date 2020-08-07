@@ -84,6 +84,19 @@ export class COMService {
       .pipe(catchError(err => this.handleError(err)));
   }
 
+  public fetchDeleteTestUrl(
+    repoName: string,
+    orgName: string,
+    testName: string,
+    redirect: string
+  ): Observable<string> {
+    return this.http
+      .get(apiLinks.get.deleteTest(orgName, repoName, testName, redirect), {
+        responseType: 'text',
+      })
+      .pipe(catchError(err => this.handleError(err)));
+  }
+
   private getParams(filters: Filter[]) {
     let params: HttpParams = new HttpParams();
     filters.forEach(filter => (params = params.set(filter.name, filter.value)));
