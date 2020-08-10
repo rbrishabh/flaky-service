@@ -45,7 +45,7 @@ function handleError (res, err) {
     res.status(401).send({ error: 'Unauthorized' });
   } else {
     console.error(err.stack);
-    res.status(500).send({ error: 'Unknown Error' });
+    res.status(500).send({ error: 'Unknown Error', stack: err.stack });
   }
 }
 
