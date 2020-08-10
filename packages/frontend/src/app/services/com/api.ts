@@ -49,13 +49,13 @@ export const apiLinks: ApiLinks = {
       redirect: string
     ) =>
       apiBaseLink +
-      'repo/' +
+      'repo/deleteurl/' +
       encodeURIComponent(orgName) +
       '/' +
       encodeURIComponent(repoName) +
-      '/test/' +
+      '?testname=' +
       encodeURIComponent(testName) +
-      '?redirect=' +
+      '&redirect=' +
       encodeURIComponent(redirect),
   },
   post: {
