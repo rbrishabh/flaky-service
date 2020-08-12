@@ -81,7 +81,6 @@ app.get('/api/callback', async (req, res) => {
     return res.status(404).redirect(redirect);
   }
   const userPermission = await auth.retrieveUserPermission(queryObject.access_token, ticket.fullName);
-  console.log('PERMISSION: ' + userPermission);
 
   const performed = await repo.performTicketIfAllowed(ticket, userPermission);
 
