@@ -21,10 +21,15 @@ export class BatchesProvider {
     daysToDisplay: number
   ): BuildBatch[] {
     const newBatches = [];
-    let batchIndex = 0;
 
     const batchMoment = moment().subtract(weeksToDisplay - 1, 'weeks');
     batchMoment.day(0);
+
+    // Ignore all batches previous to the oldest heat map day
+    let batchIndex = batches.findIndex(batch => {
+      return moment.unix(batch.timestamp).isSameOrAfter(batchMoment, 'day');
+    });
+    batchIndex = batchIndex < 0 ? 0 : batchIndex;
 
     for (let xDomainIndex = 0; xDomainIndex < weeksToDisplay; xDomainIndex++) {
       for (let yDomainIndex = 0; yDomainIndex < daysToDisplay; yDomainIndex++) {
