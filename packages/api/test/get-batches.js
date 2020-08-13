@@ -21,10 +21,11 @@ const assert = require('assert');
 const fetch = require('node-fetch');
 const firebaseEncode = require('../lib/firebase-encode');
 const addBuild = require('../src/add-build');
-const client = require('../src/firestore.js');
+const { deleteRepo } = require('../lib/deleter');
+const client = require('../src/firestore');
 
 const repos = {
-  repoId: encodeURIComponent('org1/repo1'),
+  repoId: 'org1/repo1',
   organization: 'org1',
   name: 'repo1',
   searchindex: 0,
@@ -40,7 +41,7 @@ const repos = {
 const builds = [
   // 2 builds in 2000-01-01 @ 01:00 am
   {
-    repoId: encodeURIComponent('org1/repo1'),
+    repoId: firebaseEncode(repos.repoId),
     organization: 'org1',
     name: 'repo1',
     buildId: '1',
@@ -58,7 +59,7 @@ const builds = [
     buildmessage: 'Workflow - 2'
   },
   {
-    repoId: encodeURIComponent('org1/repo1'),
+    repoId: firebaseEncode(repos.repoId),
     organization: 'org1',
     name: 'repo1',
     buildId: '2',
@@ -78,7 +79,7 @@ const builds = [
 
   // 1 build in 2000-01-02 @ 01:00 pm
   {
-    repoId: encodeURIComponent('org1/repo1'),
+    repoId: firebaseEncode(repos.repoId),
     organization: 'org1',
     name: 'repo1',
     buildId: '3',
@@ -280,6 +281,6 @@ describe('GetBatchesHandler', () => {
   });
 
   after(async () => {
-    await client.collection(global.headCollection).doc(firebaseEncode(repos.repoId)).delete();
+    await deleteRepo(client, repos.repoId);
   });
 });
