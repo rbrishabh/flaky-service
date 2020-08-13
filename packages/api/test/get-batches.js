@@ -46,11 +46,11 @@ const builds = [
     name: 'repo1',
     buildId: '1',
     timestamp: moment.utc('2000-01-01 01:00').toDate(),
-    sha: '111',
+    sha: uuidv4(),
     url: 'https://github.com/org1/repo1',
     environment: {
       os: 'linux-banana',
-      matrix: { 'node-version': '12.0' },
+      matrix: JSON.stringify({ 'node-version': 12.0 }),
       ref: 'master',
       tag: 'tag1'
     },
@@ -64,13 +64,13 @@ const builds = [
     name: 'repo1',
     buildId: '2',
     timestamp: moment.utc('2000-01-01 01:00').toDate(),
-    sha: '222',
+    sha: uuidv4(),
     url: 'https://github.com/org1/repo1',
     environment: {
       os: 'windows-peach',
-      matrix: { 'node-version': '12.0' },
-      ref: 'master',
-      tag: 'tag1'
+      matrix: JSON.stringify({ 'node-version': 14.0 }),
+      ref: 'dev',
+      tag: 'tag2'
     },
     testCases: [],
     description: 'a repository',
@@ -84,11 +84,11 @@ const builds = [
     name: 'repo1',
     buildId: '3',
     timestamp: moment.utc('2000-01-02 13:00').toDate(),
-    sha: '333',
+    sha: uuidv4(),
     url: 'https://github.com/org1/repo1',
     environment: {
       os: 'windows-peach',
-      matrix: { 'node-version': '14.0' },
+      matrix: JSON.stringify({ 'node-version': 14.0 }),
       ref: 'dev',
       tag: 'tag2'
     },
@@ -193,7 +193,7 @@ describe('GetBatchesHandler', () => {
 
     it('should filter by matrix', async () => {
       clock = sinon.useFakeTimers(moment.utc('2000-11-11').toDate());
-      const matrix = encodeURIComponent(JSON.stringify(builds[0].environment.matrix));
+      const matrix = '%7B"node-version":12%7D';
 
       const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batches?matrix=' + matrix);
       clock.tick(1);
@@ -202,12 +202,12 @@ describe('GetBatchesHandler', () => {
       clock.tick(1);
 
       assert.strictEqual(respBatches.length, 1);
-      assertBuildsInBatch(respBatches[0], builds.slice(0, 2));
+      assertBuildsInBatch(respBatches[0], builds.slice(0, 1));
     });
 
     it('should filter by reference', async () => {
       clock = sinon.useFakeTimers(moment.utc('2000-11-11').toDate());
-      const ref = 'dev';
+      const ref = 'master';
 
       const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batches?ref=' + ref);
       clock.tick(1);
@@ -216,7 +216,7 @@ describe('GetBatchesHandler', () => {
       clock.tick(1);
 
       assert.strictEqual(respBatches.length, 1);
-      assertBuildsInBatch(respBatches[0], [builds[2]]);
+      assertBuildsInBatch(respBatches[0], [builds[0]]);
     });
 
     it('should filter by operating system', async () => {
@@ -252,31 +252,112 @@ describe('GetBatchesHandler', () => {
   });
 
   describe('fetch single batch', () => {
-    beforeEach(() => { clock = sinon.useFakeTimers(); });
+    let timestamp;
+    beforeEach(() => {
+      clock = sinon.useFakeTimers();
+      timestamp = moment.utc('2000-01-01').unix();
+    });
     afterEach(() => clock.restore());
 
     it('should return a batch with all builds for the specified day', async () => {
-      const timestamp = moment.utc('2000-01-01').unix();
       const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp);
       clock.tick(1);
 
-      const builds = await resp.json();
+      const _builds = await resp.json();
       clock.tick(1);
 
-      assert.strictEqual(builds.length, 2);
-      assert.strictEqual(builds[0].buildId, builds[0].buildId);
-      assert.strictEqual(builds[1].buildId, builds[1].buildId);
+      assert.strictEqual(_builds.length, 2);
+      assert(_builds.find(build => build.sha === builds[0].sha));
+      assert(_builds.find(build => build.sha === builds[1].sha));
     });
 
     it('should return an empty batch if no build exist', async () => {
-      const timestamp = moment.utc('2000-01-05').unix();
+      timestamp = moment.utc('2000-01-05').unix();
       const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp);
       clock.tick(1);
 
-      const builds = await resp.json();
+      const _builds = await resp.json();
       clock.tick(1);
 
-      assert.strictEqual(builds.length, 0);
+      assert.strictEqual(_builds.length, 0);
+    });
+
+    it('should return a bad request error if the query contains an invalid matrix', async () => {
+      const matrix = 'unknown';
+
+      const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp + '?matrix=' + matrix);
+      clock.tick(1);
+
+      const respObj = await resp.json();
+      clock.tick(1);
+
+      assert.strictEqual(respObj.error, 'Bad Request');
+    });
+
+    it('should filter by matrix', async () => {
+      const matrix = '%7B"node-version":14%7D';
+
+      const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp + '?matrix=' + matrix);
+      clock.tick(1);
+
+      const _builds = await resp.json();
+      clock.tick(1);
+
+      assert.strictEqual(_builds.length, 1);
+      assert.strictEqual(_builds[0].sha, builds[1].sha);
+    });
+
+    it('should filter by reference', async () => {
+      const ref = 'dev';
+
+      const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp + '?ref=' + ref);
+      clock.tick(1);
+
+      const _builds = await resp.json();
+      clock.tick(1);
+
+      assert.strictEqual(_builds.length, 1);
+      assert.strictEqual(_builds[0].sha, builds[1].sha);
+    });
+
+    it('should filter by operating system', async () => {
+      const os = 'windows-peach';
+
+      const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp + '?os=' + os);
+      clock.tick(1);
+
+      const _builds = await resp.json();
+      clock.tick(1);
+
+      assert.strictEqual(_builds.length, 1);
+      assert.strictEqual(_builds[0].sha, builds[1].sha);
+    });
+
+    it('should filter by tag', async () => {
+      const tag = 'tag2';
+
+      const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + timestamp + '?tag=' + tag);
+      clock.tick(1);
+
+      const _builds = await resp.json();
+      clock.tick(1);
+
+      assert.strictEqual(_builds.length, 1);
+      assert.strictEqual(_builds[0].sha, builds[1].sha);
+    });
+
+    it('should return a bad request error if the query contains an invalid timestamp', async () => {
+      const expectBadRequest = async (_timestamp) => {
+        const resp = await fetch('http://localhost:3000/api/repo/org1/repo1/batch/' + _timestamp);
+        clock.tick(1);
+        const respObj = await resp.json();
+        clock.tick(1);
+        assert.strictEqual(respObj.error, 'Bad Request');
+      };
+
+      const invalidTimestamps = ['bad timestamp', -1, 'undefined', 'null'];
+
+      for (let k = 0; k < invalidTimestamps.length; k++) { await expectBadRequest(invalidTimestamps[k]); }
     });
   });
 
