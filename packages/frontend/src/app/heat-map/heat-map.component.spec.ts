@@ -14,7 +14,7 @@
 
 import {async, ComponentFixture, TestBed} from '@angular/core/testing';
 import {HeatMapComponent} from './heat-map.component';
-import {of} from 'rxjs';
+import {of, empty} from 'rxjs';
 import {COMService} from '../services/com/com.service';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {ScrollingModule} from '@angular/cdk/scrolling';
@@ -23,6 +23,7 @@ import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {MatListModule} from '@angular/material/list';
 import {By} from '@angular/platform-browser';
 import {mockBuilds} from './mockBuilds.spec';
+import {mockBatches} from './mockBatches.spec';
 import * as moment from 'moment';
 
 describe('HeatMapComponent', () => {
@@ -31,7 +32,8 @@ describe('HeatMapComponent', () => {
 
   // mock services
   const mockCOMService = {
-    fetchBuilds: () => of({builds: mockBuilds.none}),
+    fetchBatches: () => of(mockBatches.none),
+    fetchBatch: () => of(mockBuilds.none),
   };
 
   beforeEach(async(() => {
@@ -57,12 +59,28 @@ describe('HeatMapComponent', () => {
     component.init('', '');
   });
 
+  afterEach(() => {
+    delete mockBatches._3PreviousDays[0]['builds'];
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
   it("should emit 'loadingComplete' when the builds are received", done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds.none});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
+
+    component.loadingComplete.subscribe(() => {
+      // loadingComplete was emitted
+      expect().nothing();
+      done();
+    });
+
+    component.init('', '');
+  });
+
+  it("should emit 'loadingComplete' when an empty response is received", done => {
+    mockCOMService.fetchBatches = () => empty();
 
     component.loadingComplete.subscribe(() => {
       // loadingComplete was emitted
@@ -74,7 +92,7 @@ describe('HeatMapComponent', () => {
   });
 
   it('should render every cell', () => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds.none});
+    mockCOMService.fetchBatches = () => of(mockBatches.none);
     const cols = 10,
       rows = 7,
       expectedCellsCount = cols * rows;
@@ -93,7 +111,7 @@ describe('HeatMapComponent', () => {
   });
 
   it('should set the right colors in the cells', () => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
@@ -103,13 +121,15 @@ describe('HeatMapComponent', () => {
     // ignore the first week
     const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
 
-    mockBuilds._3PreviousDays.forEach(build => {
-      expect(rects[build.row].styles['fill']).toEqual(build.expectedColor);
+    mockBatches._3PreviousDays.forEach(batch => {
+      expect(rects[batch.row].styles['fill']).toEqual(batch.expectedColor);
     });
   });
 
-  it('should show the builds when a valid cell is selected', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+  it('should fetch and save the builds when a valid cell is selected for the first time', done => {
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
+    mockCOMService.fetchBatch = () => of([mockBuilds._3PreviousDays[0]]);
+    const buildsFetcher = spyOn(mockCOMService, 'fetchBatch').and.callThrough();
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
@@ -118,26 +138,63 @@ describe('HeatMapComponent', () => {
 
     // click on a valid cell
     const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
-    rects[mockBuilds._3PreviousDays[0].row].nativeElement.dispatchEvent(
-      new Event('click')
-    );
+    const batch = mockBatches._3PreviousDays[0];
+    rects[batch.row].nativeElement.dispatchEvent(new Event('click'));
     fixture.detectChanges();
 
     setTimeout(() => {
-      const builds = fixture.debugElement.queryAll(By.css('.build'));
-      expect(builds.length).toEqual(2);
+      // The builds have been requested
+      expect(buildsFetcher).toHaveBeenCalledTimes(1);
+
+      // The builds have been saved
+      expect(batch['builds'].length).toEqual(1);
+      expect(batch['builds'][0]).toEqual(mockBuilds._3PreviousDays[0]);
+
+      // The builds have been rendered
+      const renderedBuilds = fixture.debugElement.queryAll(By.css('.build'));
+      expect(renderedBuilds.length).toEqual(1);
       expect(
-        builds[0].query(By.css('.build-link')).nativeElement.textContent
-      ).toEqual('#' + mockBuilds._3PreviousDays[0].buildmessage);
+        renderedBuilds[0].query(By.css('.build-link')).nativeElement.textContent
+      ).toEqual(mockBuilds._3PreviousDays[0].buildmessage);
+      done();
+    });
+  });
+
+  it('should not fetch the builds if they are already present', done => {
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
+    mockCOMService.fetchBatch = () => of([mockBuilds._3PreviousDays[0]]);
+    const buildsFetcher = spyOn(mockCOMService, 'fetchBatch').and.callThrough();
+    component.init('', '');
+
+    const dataHolder = fixture.debugElement.query(
+      By.css(component.dataHolderSelector)
+    );
+
+    // preset the builds
+    const batch = mockBatches._3PreviousDays[0];
+    batch['builds'] = [mockBuilds._3PreviousDays[0]];
+
+    // click on a valid cell
+    const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
+    rects[batch.row].nativeElement.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    setTimeout(() => {
+      // The builds have NOT been requested
+      expect(buildsFetcher).not.toHaveBeenCalled();
+
+      // The saved build have been rendered
+      const renderedBuilds = fixture.debugElement.queryAll(By.css('.build'));
+      expect(renderedBuilds.length).toEqual(1);
       expect(
-        builds[1].query(By.css('.build-link')).nativeElement.textContent
-      ).toEqual('#' + mockBuilds._3PreviousDays[1].buildmessage);
+        renderedBuilds[0].query(By.css('.build-link')).nativeElement.textContent
+      ).toEqual(mockBuilds._3PreviousDays[0].buildmessage);
       done();
     });
   });
 
   it('should not show the builds when an invalid cell is selected', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches.none);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
@@ -189,24 +246,22 @@ describe('HeatMapComponent', () => {
   });
 
   it('should show the right text in the tooltip when the mouse hovers a success cell', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
     );
 
-    const build = mockBuilds._3PreviousDays[0];
+    const batch = mockBatches._3PreviousDays[0];
     const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
 
-    rects[build.row].nativeElement.dispatchEvent(new Event('mousemove'));
+    rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
 
     setTimeout(() => {
       const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment
-        .unix(build.timestamp._seconds)
-        .format('MMM D, YYYY');
+      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
       const expectedText = '2 passing on ' + buildTime;
       expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
       done();
@@ -214,24 +269,22 @@ describe('HeatMapComponent', () => {
   });
 
   it('should show the right text in the tooltip when the mouse hovers a flaky cell', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
     );
 
-    const build = mockBuilds._3PreviousDays[3];
+    const batch = mockBatches._3PreviousDays[2];
     const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
 
-    rects[build.row].nativeElement.dispatchEvent(new Event('mousemove'));
+    rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
 
     setTimeout(() => {
       const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment
-        .unix(build.timestamp._seconds)
-        .format('MMM D, YYYY');
+      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
       const expectedText = '1 flaky on ' + buildTime;
       expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
       done();
@@ -239,24 +292,22 @@ describe('HeatMapComponent', () => {
   });
 
   it('should show the right text in the tooltip when the mouse hovers a failling cell', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
     );
 
-    const build = mockBuilds._3PreviousDays[2];
+    const batch = mockBatches._3PreviousDays[1];
     const rects = dataHolder.queryAll(By.css('rect')).reverse().slice(7);
 
-    rects[build.row].nativeElement.dispatchEvent(new Event('mousemove'));
+    rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
 
     setTimeout(() => {
       const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment
-        .unix(build.timestamp._seconds)
-        .format('MMM D, YYYY');
+      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
       const expectedText = '1 failing on ' + buildTime;
       expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
       done();
@@ -264,7 +315,7 @@ describe('HeatMapComponent', () => {
   });
 
   it('should show the right text in the tooltip when the mouse hovers a blank cell', done => {
-    mockCOMService.fetchBuilds = () => of({builds: mockBuilds._3PreviousDays});
+    mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
 
     const dataHolder = fixture.debugElement.query(
