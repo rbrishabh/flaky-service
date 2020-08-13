@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {async, ComponentFixture, TestBed} from '@angular/core/testing';
+import {async, ComponentFixture, TestBed, fakeAsync, tick} from '@angular/core/testing';
 import {HeatMapComponent} from './heat-map.component';
 import {of, empty} from 'rxjs';
 import {COMService} from '../services/com/com.service';
@@ -193,7 +193,7 @@ describe('HeatMapComponent', () => {
     });
   });
 
-  it('should not show the builds when an invalid cell is selected', done => {
+  it('should not show the builds when an invalid cell is selected', fakeAsync(() => {
     mockCOMService.fetchBatches = () => of(mockBatches.none);
     component.init('', '');
 
@@ -204,15 +204,13 @@ describe('HeatMapComponent', () => {
     const rects = dataHolder.queryAll(By.css('rect')).reverse();
     rects[0].nativeElement.dispatchEvent(new Event('click'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const builds = fixture.debugElement.queryAll(By.css('.build'));
-      expect(builds.length).toEqual(0);
-      done();
-    });
-  });
+    const builds = fixture.debugElement.queryAll(By.css('.build'));
+    expect(builds.length).toEqual(0);
+  }));
 
-  it('should show the tooltip when the mouse hovers a cell', done => {
+  it('should show the tooltip when the mouse hovers a cell', fakeAsync(() => {
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
     );
@@ -220,15 +218,13 @@ describe('HeatMapComponent', () => {
     const rects = dataHolder.queryAll(By.css('rect')).reverse();
     rects[0].nativeElement.dispatchEvent(new Event('mouseover'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      expect(tooltip.styles['visibility']).toEqual('visible');
-      done();
-    });
-  });
+    const tooltip = fixture.debugElement.query(By.css('.tooltip'));
+    expect(tooltip.styles['visibility']).toEqual('visible');
+  }));
 
-  it('should hide the tooltip when the mouse leaves a cell', done => {
+  it('should hide the tooltip when the mouse leaves a cell', fakeAsync(() => {
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
     );
@@ -238,16 +234,15 @@ describe('HeatMapComponent', () => {
     const rects = dataHolder.queryAll(By.css('rect')).reverse();
     rects[0].nativeElement.dispatchEvent(new Event('mouseleave'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      expect(tooltip.styles['visibility']).toEqual('hidden');
-      done();
-    });
-  });
+    expect(tooltip.styles['visibility']).toEqual('hidden');
+  }));
 
-  it('should show the right text in the tooltip when the mouse hovers a success cell', done => {
+  it('should show the right text in the tooltip when the mouse hovers a success cell', fakeAsync(() => {
     mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
+    tick();
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
@@ -258,19 +253,18 @@ describe('HeatMapComponent', () => {
 
     rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
-      const expectedText = '2 passing on ' + buildTime;
-      expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
-      done();
-    });
-  });
+    const tooltip = fixture.debugElement.query(By.css('.tooltip'));
+    const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
+    const expectedText = '2 passing on ' + buildTime;
+    expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
+  }));
 
-  it('should show the right text in the tooltip when the mouse hovers a flaky cell', done => {
+  it('should show the right text in the tooltip when the mouse hovers a flaky cell', fakeAsync(() => {
     mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
+    tick();
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
@@ -281,19 +275,18 @@ describe('HeatMapComponent', () => {
 
     rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
-      const expectedText = '1 flaky on ' + buildTime;
-      expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
-      done();
-    });
-  });
+    const tooltip = fixture.debugElement.query(By.css('.tooltip'));
+    const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
+    const expectedText = '1 flaky on ' + buildTime;
+    expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
+  }));
 
-  it('should show the right text in the tooltip when the mouse hovers a failling cell', done => {
+  it('should show the right text in the tooltip when the mouse hovers a failling cell', fakeAsync(() => {
     mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
+    tick();
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
@@ -304,19 +297,18 @@ describe('HeatMapComponent', () => {
 
     rects[batch.row].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
-      const expectedText = '1 failing on ' + buildTime;
-      expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
-      done();
-    });
-  });
+    const tooltip = fixture.debugElement.query(By.css('.tooltip'));
+    const buildTime = moment.unix(batch.timestamp).format('MMM D, YYYY');
+    const expectedText = '1 failing on ' + buildTime;
+    expect(tooltip.nativeElement.textContent.trim()).toEqual(expectedText);
+  }));
 
-  it('should show the right text in the tooltip when the mouse hovers a blank cell', done => {
+  it('should show the right text in the tooltip when the mouse hovers a blank cell', fakeAsync(() => {
     mockCOMService.fetchBatches = () => of(mockBatches._3PreviousDays);
     component.init('', '');
+    tick();
 
     const dataHolder = fixture.debugElement.query(
       By.css(component.dataHolderSelector)
@@ -326,13 +318,11 @@ describe('HeatMapComponent', () => {
 
     rects[0].nativeElement.dispatchEvent(new Event('mousemove'));
     fixture.detectChanges();
+    tick();
 
-    setTimeout(() => {
-      const tooltip = fixture.debugElement.query(By.css('.tooltip'));
-      expect(
-        tooltip.nativeElement.textContent.trim().startsWith('No build on ')
-      ).toBeTrue();
-      done();
-    });
-  });
+    const tooltip = fixture.debugElement.query(By.css('.tooltip'));
+    expect(
+      tooltip.nativeElement.textContent.trim().startsWith('No build on ')
+    ).toBeTrue();
+  }));
 });
