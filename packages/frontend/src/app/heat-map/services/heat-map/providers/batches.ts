@@ -34,8 +34,9 @@ export class BatchesProvider {
           newBatches.push(this.defaultBatch(xDomainIndex, batchMoment));
         else {
           const batch = batches[batchIndex];
+          batch['moment'] = moment.unix(batch.timestamp);
 
-          if (batch.moment.local().isSame(batchMoment, 'day')) {
+          if (batch.moment.isSame(batchMoment, 'day')) {
             batch['x'] = xDomainIndex;
             batch['y'] = batch.moment.day().toString();
             batch['health'] = this.getBatchHealth(batch);
@@ -54,7 +55,6 @@ export class BatchesProvider {
 
   private defaultBatch(xDomainIndex: number, batchMoment: moment.Moment) {
     return {
-      builds: [],
       failingBuilds: 0,
       flakyBuilds: 0,
       passedBuilds: 0,
@@ -62,6 +62,7 @@ export class BatchesProvider {
       y: batchMoment.day().toString(),
       moment: batchMoment.clone(),
       health: BuildHealth.none,
+      isDefault: true,
     };
   }
 
