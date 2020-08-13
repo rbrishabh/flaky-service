@@ -25,7 +25,6 @@ class BatchService {
 
     builds.forEach((build, index) => {
       if (newBatch && this._buildBelongsToBatch(newBatch, build)) {
-        // newBatch.builds.push(build);
         this._updateBatchStats(newBatch, build);
       } else {
         if (newBatch) {
