@@ -73,12 +73,8 @@ class Parser {
         const testCaseRun = new TestCaseRun(okayMessage, name);
 
         if (!testCaseRun.successful) {
-          // Here we must have a failure or an error.
-          let log = (failure === undefined) ? error._text : failure._text;
-          // Java puts its test logs in a CDATA element.
-          if (log === undefined) {
-            log = failure._cdata;
-          }
+          // Java puts its test logs in a CDATA element; other languages use _text.
+          const log = failure._text || failure._cdata || '';
 
           testCaseRun.failureMessage = log;
         }
