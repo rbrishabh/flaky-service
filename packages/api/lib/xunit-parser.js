@@ -14,6 +14,7 @@
 
 const xmljs = require('xml-js');
 const TestCaseRun = require('../lib/testrun');
+const firebaseEncode = require('./firebase-encode');
 
 class Parser {
   /**
@@ -104,7 +105,9 @@ class Parser {
   * @returns {JSON} The metadata for the build
   */
   cleanXunitBuildInfo (metadata) {
-    return {};
+    metadata.repoId = firebaseEncode(metadata.repoId);
+    metadata.buildId = firebaseEncode(metadata.buildId);
+    return metadata;
   }
 }
 
