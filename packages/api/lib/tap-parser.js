@@ -39,8 +39,8 @@ function getTestCases (inputFilePath, fileName) {
     var dateMatch = outcome[i].match(dateRegex);
 
     if (tryMatch !== null) {
-      tryMatch.groups.status = tryMatch.groups.status === 'ok' ? true : false;
-      testCases.push(new TestCaseRun(tryMatch.groups.status, tryMatch.groups.casenumb, tryMatch.groups.message));
+      tryMatch.groups.status = (tryMatch.groups.status === 'ok');
+      testCases.push(new TestCaseRun(tryMatch.groups.status, tryMatch.groups.message));
     }
 
     if (dateMatch !== null && determinedDate == null) {
